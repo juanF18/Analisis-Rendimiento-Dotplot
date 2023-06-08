@@ -27,10 +27,10 @@ def crear_dotplot(args):
 def procesar_comparacion(secuencia1, secuencia2, num_procesos):
     pool = multiprocessing.Pool(processes=num_procesos)
     subsecuencias1 = dividir_secuencia(secuencia1, num_procesos)
-    resultados = pool.imap(crear_dotplot, [(subseq, secuencia2, i) for i, subseq in enumerate(subsecuencias1)])
+    resultados = [pool.apply_async(crear_dotplot, args=((subseq, secuencia2, i),)) for i, subseq in enumerate(subsecuencias1)]
     dotplot = np.zeros((len(secuencia1), len(secuencia2)), dtype=np.uint8)
     for i, resultado in tqdm(enumerate(resultados), total=num_procesos):
-        indice, resultado_parcial = resultado
+        indice, resultado_parcial = resultado.get()
         dotplot[indice * len(secuencia1) // num_procesos: (indice + 1) * len(secuencia1) // num_procesos] = resultado_parcial
     pool.close()
     pool.join()
@@ -55,6 +55,13 @@ def calcular_peso_matriz(matriz):
     
     return megabytes_matriz
 
+def draw_dotplot(matrix, fig_name='dotplot.svg'):
+    plt.figure(figsize=(5,5))
+    plt.imshow(matrix, cmap='gray',aspect='auto')
+    plt.ylabel("Secuencia 1")
+    plt.xlabel("Secuencia 2")
+    plt.savefig(fig_name)
+
 
 if __name__ == '__main__':
     secuencia1 = merge_sequences_from_fasta('data/E_coli.fna')
@@ -63,17 +70,19 @@ if __name__ == '__main__':
 
     inicio_tiempo = time.time()
     dotplot = procesar_comparacion(secuencia1[0:50000], secuencia2[0:50000], num_procesos)
-    preview_size = 1000 
+    preview_size = 30000 
     dotplot_preview = dotplot[:preview_size, :preview_size]
-    plt.imshow(dotplot_preview, cmap='gray')
+    plt.imshow(dotplot_preview, cmap='gray', aspect='auto')
     plt.title('Dotplot (Vista previa)')
     plt.xlabel('Secuencia 2')
     plt.ylabel('Secuencia 1')
     plt.savefig('images/Multiprocessing')
+    draw_dotplot(dotplot_preview, 'images/Multiprocessing.svg')
+    draw_dotplot(dotplot_preview[:500,:500], 'images/Multiprocessing_aumentada.svg')
     fin_tiempo = time.time()
     tiempo_ejecucion = fin_tiempo - inicio_tiempo
 
     print("El codigo se ejecuto en:", tiempo_ejecucion, " segundos")
     print("El tamaño de la matriz es: ",dotplot.shape)
     print("La matriz resultado tiene un tamaño de " + str(calcular_peso_matriz(dotplot)) + " Mb")
-    plt.show()
+    #plt.show()
