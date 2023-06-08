@@ -23,21 +23,31 @@ def crear_dotplot(secuencia1, secuencia2):
         dotplot[i, matches] = 1
     return dotplot
 
-secuencia1 = merge_sequences_from_fasta("./data/E_coli.fna")
-secuencia2 = merge_sequences_from_fasta("./data/Salmonella.fna")
+def draw_dotplot(matrix, fig_name='dotplot.svg'):
+    plt.figure(figsize=(5,5))
+    plt.imshow(matrix, cmap='gray',aspect='auto')
+    plt.ylabel("Secuencia 1")
+    plt.xlabel("Secuencia 2")
+    plt.savefig(fig_name)
 
-begin = time.time()
-dotplot = crear_dotplot(secuencia1[:30000], secuencia2[:30000])
-print("La matriz de resultado tiene tamaño: ", dotplot.shape)
-preview_size = 1000
-dotplot_preview = dotplot[:preview_size, :preview_size].toarray()
+if __name__ == '__main__':
+    secuencia1 = merge_sequences_from_fasta("./data/E_coli.fna")
+    secuencia2 = merge_sequences_from_fasta("./data/Salmonella.fna")
 
-plt.imshow(dotplot_preview, cmap='gray')
-plt.title('Dotplot (Vista previa)')
-plt.xlabel('Secuencia 2')
-plt.ylabel('Secuencia 1')
-plt.savefig('images/Secuencial')
+    begin = time.time()
+    dotplot = crear_dotplot(secuencia1[:50000], secuencia2[:50000])
+    print("La matriz de resultado tiene tamaño: ", dotplot.shape)
+    preview_size = 10000
+    dotplot_preview = dotplot[:preview_size, :preview_size].toarray()
 
-print(f"\n El código se ejecutó en: {time.time() - begin} segundos")
-print("la matriz resultado tiene un tamaño de " + str(sys.getsizeof(dotplot)) + " bytes")
-plt.show()
+    plt.imshow(dotplot_preview, cmap='gray')
+    plt.title('Dotplot (Vista previa)')
+    plt.xlabel('Secuencia 2')
+    plt.ylabel('Secuencia 1')
+    plt.savefig('images/Secuencial')
+    draw_dotplot(dotplot_preview, 'images/Secuencial.svg')
+    draw_dotplot(dotplot_preview[:500,:500], 'images/Secuencial_aumentada.svg')
+
+    print(f"\n El código se ejecutó en: {time.time() - begin} segundos")
+    print("la matriz resultado tiene un tamaño de " + str(sys.getsizeof(dotplot)) + " bytes")
+    #plt.show()

@@ -79,6 +79,12 @@ def calcular_peso_matriz(matriz):
 
     return megabytes_matriz
 
+def draw_dotplot(matrix, fig_name='dotplot.svg'):
+    plt.figure(figsize=(5,5))
+    plt.imshow(matrix, cmap='gray',aspect='auto')
+    plt.ylabel("Secuencia 1")
+    plt.xlabel("Secuencia 2")
+    plt.savefig(fig_name)
 
 if __name__ == '__main__':
     comm = MPI.COMM_WORLD
@@ -86,25 +92,26 @@ if __name__ == '__main__':
 
     secuencia1 = merge_sequences_from_fasta('data/E_coli.fna')
     secuencia2 = merge_sequences_from_fasta('data/Salmonella.fna')
-    seccion_matriz = 45000
+    seccion_matriz = 46000
 
     if rank == 0:
         num_procesos = comm.Get_size()
         inicio_tiempo = time.time()
         dotplot = procesar_comparacion(secuencia1[0:seccion_matriz], secuencia2[0:seccion_matriz])
-        fin_tiempo = time.time()
-        tiempo_ejecucion = fin_tiempo - inicio_tiempo
-
-        print("El codigo se ejecuto en:", tiempo_ejecucion, " segundos")
-        print("El tamaño de la matriz es: ", dotplot.shape)
-        print("La matriz resultado tiene un tamaño de " + str(calcular_peso_matriz(dotplot)) + " Mb")
-        preview_size = 1000 
+        preview_size = 30000 
         dotplot_preview = dotplot[:preview_size, :preview_size]
         plt.imshow(dotplot_preview, cmap='gray')
         plt.title('Dotplot')
         plt.xlabel('Secuencia 2')
         plt.ylabel('Secuencia 1')
         plt.savefig('images/MPI')
+        draw_dotplot(dotplot_preview, 'images/MPI.svg')
+        draw_dotplot(dotplot_preview[:500,:500], 'images/MPI_aumentada.svg')
+        fin_tiempo = time.time()
+        tiempo_ejecucion = fin_tiempo - inicio_tiempo
+
+        print("El codigo se ejecuto en:", tiempo_ejecucion, " segundos")
+        print("El tamaño de la matriz es: ", dotplot.shape)
+        print("La matriz resultado tiene un tamaño de " + str(calcular_peso_matriz(dotplot)) + " Mb")
     else:
         procesar_comparacion(secuencia1[0:seccion_matriz], secuencia2[0:seccion_matriz])
-    plt.show()
