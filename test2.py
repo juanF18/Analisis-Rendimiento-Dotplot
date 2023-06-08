@@ -28,6 +28,7 @@ def crear_dotplot(args):
 
 
 def procesar_comparacion(secuencia1, secuencia2, chunk_size):
+    inicio_parcial = time.time()
     comm = MPI.COMM_WORLD
     num_procesos = comm.Get_size()
     rank = comm.Get_rank()
@@ -37,7 +38,6 @@ def procesar_comparacion(secuencia1, secuencia2, chunk_size):
         subsecuencias1 = dividir_secuencia(secuencia1, chunk_size)
     else:
         subsecuencias1 = None
-
     # Broadcast de las subsecuencias1 desde el proceso 0 a todos los procesos
     subsecuencias1 = comm.bcast(subsecuencias1, root=0)
 
@@ -58,7 +58,8 @@ def procesar_comparacion(secuencia1, secuencia2, chunk_size):
             inicio = indice * chunk_size
             fin = min(inicio + chunk_size, len(secuencia1))
             dotplot[inicio:fin] = resultado_parcial
-
+        fin_tiempo_parcial = time.time()
+        print("Tiempo parcial: ", fin_tiempo_parcial - inicio_parcial)
         return dotplot
     else:
         return None
@@ -99,8 +100,8 @@ if __name__ == '__main__':
 
     secuencia1 = merge_sequences_from_fasta('data/E_coli.fna')
     secuencia2 = merge_sequences_from_fasta('data/Salmonella.fna')
-    seccion_matriz = 100000
-    chunk_size = 1000
+    seccion_matriz = 50000
+    chunk_size = 1500
 
     if rank == 0:
         num_procesos = comm.Get_size()
