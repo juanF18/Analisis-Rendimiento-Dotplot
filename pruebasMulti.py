@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from Bio import SeqIO
+import argparse
 
 def merge_sequences_from_fasta(file_path):
     sequences = []  # List to store all sequences
@@ -24,17 +25,31 @@ def crear_dotplot(args):
         dotplot[i, matches] = 1
     return (indice, dotplot)
 
+
 def procesar_comparacion(secuencia1, secuencia2, num_procesos):
+    manager = multiprocessing.Manager()
+    dotplot = manager.list()
+
     pool = multiprocessing.Pool(processes=num_procesos)
     subsecuencias1 = dividir_secuencia(secuencia1, num_procesos)
     resultados = [pool.apply_async(crear_dotplot, args=((subseq, secuencia2, i),)) for i, subseq in enumerate(subsecuencias1)]
-    dotplot = np.zeros((len(secuencia1), len(secuencia2)), dtype=np.uint8)
+
     for i, resultado in tqdm(enumerate(resultados), total=num_procesos):
         indice, resultado_parcial = resultado.get()
-        dotplot[indice * len(secuencia1) // num_procesos: (indice + 1) * len(secuencia1) // num_procesos] = resultado_parcial
+        dotplot.append((indice, resultado_parcial))
+
+    dotplot = sorted(dotplot, key=lambda x: x[0])
+
+    dotplot_final = np.zeros((len(secuencia1), len(secuencia2)), dtype=np.uint8)
+    for indice, resultado_parcial in dotplot:
+        inicio = indice * len(secuencia1) // num_procesos
+        fin = (indice + 1) * len(secuencia1) // num_procesos
+        dotplot_final[inicio:fin] = resultado_parcial
+
     pool.close()
     pool.join()
-    return dotplot
+
+    return dotplot_final
 
 def dividir_secuencia(secuencia, num_partes):
     longitud_subsecuencia = len(secuencia) // num_partes
@@ -64,12 +79,26 @@ def draw_dotplot(matrix, fig_name='dotplot.svg'):
 
 
 if __name__ == '__main__':
-    secuencia1 = merge_sequences_from_fasta('data/E_coli.fna')
-    secuencia2 = merge_sequences_from_fasta('data/Salmonella.fna')
-    num_procesos = 10
+    parser = argparse.ArgumentParser(description='Mi Aplicación Multiprocessing')
+    parser.add_argument('--file1', type=str, help='Ruta del archivo 1')
+    parser.add_argument('--file2', type=str, help='Ruta del archivo 2')
+    parser.add_argument('--limite', type=int, help='Numero de procesos')
+    parser.add_argument('--cores', type=int, help='Numero de procesos')
+    
+    args = parser.parse_args()
+
+    # Obtener los valores de los argumentos
+    file1 = args.file1
+    file2 = args.file2
+    limite = args.limite
+    cores = args.cores
+
+    secuencia1 = merge_sequences_from_fasta(file1)
+    secuencia2 = merge_sequences_from_fasta(file2)
+    num_procesos = cores
 
     inicio_tiempo = time.time()
-    dotplot = procesar_comparacion(secuencia1[0:50000], secuencia2[0:50000], num_procesos)
+    dotplot = procesar_comparacion(secuencia1[0:limite], secuencia2[0:limite], num_procesos)
     preview_size = 30000 
     dotplot_preview = dotplot[:preview_size, :preview_size]
     plt.imshow(dotplot_preview, cmap='gray', aspect='auto')
@@ -86,3 +115,4 @@ if __name__ == '__main__':
     print("El tamaño de la matriz es: ",dotplot.shape)
     print("La matriz resultado tiene un tamaño de " + str(calcular_peso_matriz(dotplot)) + " Mb")
     #plt.show()
+    
